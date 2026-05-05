@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tech-blazing-core-scaffold-api"
+version = "0.1.0"
+description = "FastAPI backend for tech-blazing-core-scaffold"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.34,<1.0",
+    "gunicorn>=23.0,<24.0",
+    "pyyaml>=6.0,<7.0",
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0,<3.0",
+    "slowapi>=0.1,<1.0",
+    "PyJWT>=2.9,<3.0",
+    "bcrypt>=4.0,<5.0",
+]
+
+[project.scripts]
+start = "scripts.start:main"
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28,<1.0",
+    "pytest>=8.0,<9.0",
+    "pytest-asyncio>=0.24,<1.0",
+    "ruff>=0.8,<1.0",
+]
+
+[tool.ruff]
+line-length = 120
+quote-style = "double"
+indent-width = 4
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

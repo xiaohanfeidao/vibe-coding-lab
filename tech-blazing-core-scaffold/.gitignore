@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+.venv/
+venv/
+env/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Python tools
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js
+node_modules/
+.pnpm-store/
+
+# Build output
+web-app/dist/
+admin-app/dist/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+application-prod.yml
+*.pem
+*.key
+*.p12
+*.jks
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.cache/
+.temp/
+*.bak
+
+# pnpm
+.pnpm-lock.yaml
+
+# Vite
+*.local
+
+# TypeScript
+*.tsbuildinfo

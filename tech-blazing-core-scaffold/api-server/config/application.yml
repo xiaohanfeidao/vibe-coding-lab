@@ -1,0 +1,75 @@
+app:
+  name: tech-blazing-core-scaffold
+  version: "0.1.0"
+  debug: false
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  worker_class: "uvicorn.workers.UvicornWorker"
+
+auth:
+  secret_key: "${AUTH_SECRET_KEY:change-me-in-production}"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
+  refresh_token_expire_days: 7
+  admin_username: "${ADMIN_USERNAME:admin}"
+  admin_password_hash: "${ADMIN_PASSWORD_HASH:$2b$12$KVSzxsHHI06GN3EU5rH3r.wdzXDH0LZ2oWHOCdQqH5lGOSNpCW5z2}"
+
+cors:
+  origins:
+    - "http://localhost:5173"
+    - "http://localhost:5174"
+
+rate_limit:
+  enabled: true
+  default: "60/minute"
+  auth: "10/minute"
+
+logging:
+  level: INFO
+  format: json
+
+menus:
+  web:
+    - key: home
+      title: "\u9996\u9875"
+      icon: icon-home
+      path: /
+      sort: 1
+    - key: features
+      title: "\u529f\u80fd"
+      icon: icon-apps
+      path: /features
+      sort: 2
+    - key: about
+      title: "\u5173\u4e8e"
+      icon: icon-info-circle
+      path: /about
+      sort: 3
+    - key: contact
+      title: "\u8054\u7cfb\u6211\u4eec"
+      icon: icon-phone
+      path: /contact
+      sort: 4
+  admin:
+    - key: dashboard
+      title: "\u4eea\u8868\u76d8"
+      icon: icon-dashboard
+      path: /admin/dashboard
+      sort: 1
+    - key: system
+      title: "\u7cfb\u7edf\u7ba1\u7406"
+      icon: icon-settings
+      sort: 2
+      children:
+        - key: system-config
+          title: "\u7cfb\u7edf\u914d\u7f6e"
+          path: /admin/system
+          sort: 1
+    - key: users
+      title: "\u7528\u6237\u7ba1\u7406"
+      icon: icon-user-group
+      path: /admin/users
+      sort: 3
