@@ -11,6 +11,7 @@ build/
 .venv/
 venv/
 env/
+.pip_packages/
 *.manifest
 *.spec
 pip-log.txt
