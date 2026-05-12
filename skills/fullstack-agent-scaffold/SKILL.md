@@ -1,6 +1,6 @@
----
+﻿---
 name: fullstack-agent-scaffold
-description: Scaffolds production-grade full-stack applications with AI agent capabilities. Use when starting a new full-stack project that needs a React frontend (web-app + admin-app), FastAPI backend, and AgentScope multi-agent integration. Use when building applications that combine traditional web UI with intelligent agent workflows.
+description: Scaffolds production-grade full-stack applications with AI agent capabilities. Use when starting a new full-stack project that needs a React frontend (web-app + admin-app), FastAPI backend, and AgentScope Runtime multi-agent integration. Use when building applications that combine traditional web UI with intelligent agent workflows.
 ---
 
 # Full-Stack Agent Scaffold
@@ -13,15 +13,15 @@ Build production-grade full-stack applications with embedded AI agent capabiliti
 - Building an application where users interact with intelligent agents through a web interface
 - Creating a multi-tenant system with separate front-office (web-app) and back-office (admin-app) frontends
 - Projects requiring JWT authentication, role-based menus, and agent-driven workflows
-- Any project that needs FastAPI + React + AgentScope as the core stack
+- Any project that needs FastAPI + React + AgentScope Runtime as the core stack
 
 **When NOT to use:** Static websites, simple APIs without a frontend, projects that don't need AI agent capabilities, or when a simpler stack (e.g., Next.js alone) suffices.
 
 ## Architecture Overview
 
-四层独立架构：前端（web-app / admin-app）、API 后端（FastAPI）、智能体层（AgentScope）三者完全解耦，FastAPI 与 AgentScope 之间无任何直接通信。
+四层独立架构：前端（web-app / admin-app）、API 后端（FastAPI）、智能体层（AgentScope Runtime）三者完全解耦，FastAPI 与 AgentScope Runtime 之间无任何直接通信。
 
-**核心原则：FastAPI 只做记忆服务和 REST 接口，Agent 相关功能全部由 AgentScope 独立承担，禁止 FastAPI 包装 AgentScope。**
+**核心原则：FastAPI 只做记忆服务和 REST 接口，Agent 相关功能全部由 AgentScope Runtime 独立承担，禁止 FastAPI 包装 AgentScope。**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -29,16 +29,16 @@ Build production-grade full-stack applications with embedded AI agent capabiliti
 │                                                                           │
 │  ┌──────────┐  ┌──────────┐     ┌──────────────────┐     ┌──────────────┐  │
 │  │ web-app  │  │admin-app │     │   api-server     │     │  AgentScope  │  │
-│  │ :5173    │  │ :5174    │     │   (FastAPI)      │     │  Server      │  │
-│  │ React    │  │ React    │     │   :8000          │     │   :8080      │  │
+│  │ :5173    │  │ :5174    │     │   (FastAPI)      │     │  Runtime     │  │
+│  │ React    │  │ React    │     │   :8000          │     │   :8090      │  │
 │  │ Arco     │  │ Arco     │◄────►│  Auth / Menu    │     │              │  │
 │  └────┬─────┘  │ +Auth    │     │  Memory Service  │     │ ReActAgent   │  │
-│       │        └──────────┘     │  /api/v1/web/   │     │ MsgHub       │  │
-│       │                          │  /api/v1/admin/ │     │ Pipeline     │  │
-│       │                          └──────────────────┘     │ Toolkit      │  │
-│       │                                                    │ Session      │  │
+│       │        └──────────┘     │  /api/v1/web/   │     │ AgentApp     │  │
+│       │                          │  /api/v1/admin/ │     │ StateService │  │
+│       │                          └──────────────────┘     │ StateService │  │
+│       │                                                    │ /process     │  │
 │       └────────────────────────────────────────────────────┘              │
-│                          web-app ↔ AgentScope (直接通信)                    │
+│                          web-app ↔ AgentScope Runtime (直接通信)                    │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -46,13 +46,13 @@ Build production-grade full-stack applications with embedded AI agent capabiliti
 - **web-app**：前台门户，面向终端用户，直接与 AgentScope 通信进行 AI 交互
 - **admin-app**：后台管理，面向管理员，通过 FastAPI 管理系统配置和监控数据
 - **api-server（FastAPI）**：仅负责认证、菜单、记忆服务、数据持久化等 REST 接口，**不涉及任何 Agent 逻辑**
-- **AgentScope Server**：独立运行的智能体服务，处理所有 AI 推理、工具调用、多智能体协作、会话管理
+- **AgentScope Runtime**：基于官方 AgentScope Runtime 运行的智能体服务，通过 AgentApp 提供 AaaS（Agent-as-a-Service），内置 SSE 流式输出、会话管理、OpenAI 兼容接口，处理所有 AI 推理、工具调用、多智能体协作
 
 **通信关系：**
-1. **web-app ↔ AgentScope**：前端直接调用 AgentScope Server API（WebSocket / HTTP :8080）
+1. **web-app ↔ AgentScope Runtime**：前端直接调用 AgentScope Runtime API（SSE / HTTP :8090，`/process` 端点）
 2. **admin-app ↔ api-server**：通过 `/api/v1/admin/` 路径通信（需要 JWT 认证）
 3. **web-app ↔ api-server**：通过 `/api/v1/web/` 路径通信（健康检查、菜单获取、记忆查询等）
-4. **api-server ↔ AgentScope**：**无直接通信**，两者完全独立
+4. **api-server ↔ AgentScope Runtime**：**无直接通信**，两者完全独立
 
 ## Tech Stack
 
@@ -88,7 +88,7 @@ Build production-grade full-stack applications with embedded AI agent capabiliti
 | Axios | 1+ | HTTP client |
 | Vitest | 3+ | Unit testing |
 
-### AgentScope (AI Agent Layer)
+### AgentScope Runtime (AI Agent Layer)
 
 | Component | Purpose |
 |---|---|
@@ -160,18 +160,13 @@ project-root/
 │   │       └── pagination.py
 │   └── tests/
 │
-├── agent-server/                     # AgentScope 独立服务（与 FastAPI 无关）
+├── agent-server/                     # AgentScope Runtime 独立服务（与 FastAPI 无关）
 │   ├── pyproject.toml
 │   ├── Dockerfile
 │   ├── config/
 │   │   └── agent_config.yml          # AgentScope 专属配置
 │   ├── scripts/
-│   │   ├── start.py                  # AgentScope Server 启动脚本
-│   │   ├── start.sh
-│   │   └── start.bat
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── server.py                 # AgentScope HTTP/WS Server 入口
+│   ├── app_agent.py                  # AgentApp 入口（init/query/shutdown）\n│   ├── app/\n│   │   ├── __init__.py
 │   │   ├── config/
 │   │   │   └── settings.py           # AgentScope 配置模型
 │   │   ├── agents/                   # Agent 定义
@@ -192,9 +187,6 @@ project-root/
 │   │   ├── memory/                   # Agent 记忆管理
 │   │   │   ├── __init__.py
 │   │   │   └── memory_manager.py     # 记忆压缩 + 长期记忆
-│   │   ├── session/                  # 会话管理
-│   │   │   ├── __init__.py
-│   │   │   └── session_manager.py    # JSON / Redis 会话
 │   │   └── rag/                      # RAG 知识库
 │   │       ├── __init__.py
 │   │       └── knowledge_base.py
@@ -209,7 +201,7 @@ project-root/
 │       ├── main.tsx
 │       ├── api/
 │       │   ├── client.ts             # Axios instance (api-server)
-│       │   ├── agent-client.ts       # AgentScope Server client (WS/HTTP)
+│       │   ├── agent-client.ts       # AgentScope Runtime client (SSE/HTTP)
 │       │   └── modules/
 │       │       ├── health.ts
 │       │       ├── menu.ts
@@ -222,7 +214,7 @@ project-root/
 │       │   ├── Features/
 │       │   ├── About/
 │       │   ├── Contact/
-│       │   └── AgentChat/            # Agent 交互页面（直连 AgentScope）
+│       │   └── AgentChat/            # Agent 交互页面（直连 AgentScope Runtime）
 │       ├── router/
 │       ├── styles/
 │       │   ├── arco-theme.css        # Arco Design Token overrides
@@ -272,7 +264,7 @@ project-root/
          ▼
 1.6 Health + Menu + Pagination + Rate limiting
 
-1.7 AgentScope Server (独立服务，与 FastAPI 无关)
+1.7 AgentScope Runtime (独立服务，与 FastAPI 无关)
 ```
 
 **Step 1.1 — Initialize pnpm monorepo**
@@ -509,17 +501,16 @@ async def delete_memory(memory_id: str):
 
 Health check, menu, pagination, rate limiting — follow the existing scaffold patterns.
 
-### Phase 1.8: AgentScope Server (独立服务)
+### Phase 1.8: AgentScope Runtime (独立服务)
 
-AgentScope 作为独立服务运行，与 FastAPI 完全无关。前端（web-app）直接与 AgentScope Server 通信。
+AgentScope 通过官方 AgentScope Runtime 作为独立服务运行，与 FastAPI 完全无关。前端（web-app）直接与 AgentScope Runtime 服务通信。AgentScope Runtime 提供 Agent-as-a-Service (AaaS) 能力，内置 SSE 流式输出、会话管理、OpenAI 兼容接口，无需手动编写 FastAPI 路由。
 
 ```toml
 # agent-server/pyproject.toml
 [project]
 name = "agent-server"
 dependencies = [
-    "agentscope",
-    "uvicorn>=0.34",
+    "agentscope-runtime",
     "pyyaml>=6",
     "pydantic>=2",
 ]
@@ -532,7 +523,7 @@ dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.8"]
 # agent-server/config/agent_config.yml
 server:
   host: "0.0.0.0"
-  port: 8080
+  port: 8090
 
 models:
   default: "dashscope"
@@ -672,7 +663,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-agent_app = FastAPI(title="AgentScope Server")
+agent_app = AgentApp(
 
 
 class ChatRequest(BaseModel):
@@ -719,7 +710,7 @@ async def save_session(session_id: str):
 ```bash
 cd agent-server
 pip install -e ".[dev]"
-uvicorn app.server:agent_app --host 0.0.0.0 --port 8080 --reload
+python app_agent.py
 ```
 
 ### Phase 2: web-app (Front-Office)
@@ -740,7 +731,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": { target: "http://localhost:8000", changeOrigin: true },
-      "/agent": { target: "http://localhost:8080", changeOrigin: true },
+      "/agent": { target: "http://localhost:8090", changeOrigin: true },
     },
   },
 });
@@ -770,12 +761,12 @@ export default apiClient;
 ```
 
 ```typescript
-// src/api/agent-client.ts — AgentScope Server 客户端（直连，不经过 FastAPI）
+// src/api/agent-client.ts — AgentScope Runtime 客户端（直连，不经过 FastAPI）
 import axios from "axios";
 import { Message } from "@arco-design/web-react";
 
 const agentClient = axios.create({
-  baseURL: import.meta.env.VITE_AGENT_BASE_URL ?? "http://localhost:8080",
+  const AGENT_BASE_URL = import.meta.env.VITE_AGENT_BASE_URL ?? "http://localhost:8090",
   timeout: 120000,
 });
 
@@ -801,7 +792,7 @@ export async function streamChatWithAgent(
   agentName: string = "assistant",
 ): Promise<ReadableStream> {
   const response = await fetch(
-    `${import.meta.env.VITE_AGENT_BASE_URL ?? "http://localhost:8080"}/chat/stream`,
+    `${import.meta.env.VITE_AGENT_BASE_URL ?? "http://localhost:8090"}/chat/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -898,12 +889,12 @@ services:
 
   agent-server:
     build: { context: ./agent-server, dockerfile: Dockerfile }
-    ports: ["8080:8080"]
+    ports: ["8090:8090"]
     environment:
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    volumes: [./agent-server/config:/app/config, agent-sessions:/app/sessions]
+    volumes: [./agent-server/config:/app/config]
     restart: unless-stopped
 
   web-app:
@@ -922,16 +913,16 @@ volumes:
   agent-sessions:
 ```
 
-## AgentScope Integration Patterns
+## AgentScope Runtime Integration Patterns
 
-**重要：以下所有模式均在 agent-server 中实现，与 FastAPI 无关。前端直接调用 AgentScope Server API。**
+**重要：以下所有模式均在 agent-server 中实现，与 FastAPI 无关。前端直接调用 AgentScope Runtime API（`/process` 端点）。**
 
 ### Pattern 1: Single Agent Chat (Simplest)
 
 User sends a message, one ReActAgent processes it：
 
 ```
-web-app → POST http://agent-server:8080/chat → ReActAgent → Response
+web-app → POST http://agent-server:8090/process → AgentApp → ReActAgent → SSE Response
 ```
 
 ### Pattern 2: Multi-Agent Pipeline
@@ -939,7 +930,7 @@ web-app → POST http://agent-server:8080/chat → ReActAgent → Response
 User request flows through specialized agents sequentially：
 
 ```
-web-app → POST http://agent-server:8080/chat → PlannerAgent → ResearcherAgent → WriterAgent → Response
+web-app → POST http://agent-server:8090/process → AgentApp → PlannerAgent → ResearcherAgent → WriterAgent → SSE Response
 ```
 
 ```python
@@ -965,7 +956,7 @@ async def research_pipeline(session_id: str, user_message: str):
 Same request dispatched to multiple agents concurrently：
 
 ```
-web-app → POST http://agent-server:8080/chat → Fanout → [CodeReviewer, SecurityAuditor, TestEngineer] → Merge → Response
+web-app → POST http://agent-server:8090/process → AgentApp → Fanout → [CodeReviewer, SecurityAuditor, TestEngineer] → Merge → SSE Response
 ```
 
 ```python
@@ -985,7 +976,7 @@ async def review_pipeline(session_id: str, code: str):
 
 ### Pattern 4: SSE Streaming
 
-Stream agent responses to the frontend in real-time（前端直连 AgentScope Server）：
+Stream agent responses to the frontend in real-time（前端直连 AgentScope Runtime）：
 
 ```python
 # agent-server/app/server.py
@@ -1001,7 +992,7 @@ async def chat_stream(request: ChatRequest):
 ```
 
 ```typescript
-// web-app 前端直连 AgentScope Server
+// web-app 前端直连 AgentScope Runtime
 import { streamChatWithAgent } from "@/api/agent-client";
 
 const stream = await streamChatWithAgent(sessionId, message);
@@ -1120,7 +1111,7 @@ return <DataView data={data} />;
 - No sensitive data in logs or API responses
 - Admin Token stored in JS memory, NOT localStorage
 - 401 auto-refresh with fallback to login page
-- **AgentScope Server 与 FastAPI 完全隔离，禁止在 FastAPI 中包装 AgentScope**
+- **AgentScope Runtime 与 FastAPI 完全隔离，禁止在 FastAPI 中包装 AgentScope**
 
 ## Commands
 
@@ -1132,9 +1123,12 @@ cd api-server && gunicorn app.main:app -c gunicorn.conf.py
 cd api-server && pytest tests/ -v
 cd api-server && ruff check . && ruff format --check .
 
-# agent-server (AgentScope — 独立智能体服务)
+# agent-server (AgentScope Runtime — 独立智能体服务)
 cd agent-server && pip install -e ".[dev]"
-cd agent-server && uvicorn app.server:agent_app --reload --host 0.0.0.0 --port 8080
+cd agent-server && python app_agent.py
+cd agent-server && agentscope chat app_agent.py
+cd agent-server && agentscope web app_agent.py
+cd agent-server && agentscope run app_agent.py --host 0.0.0.0 --port 8090
 cd agent-server && pytest tests/ -v
 cd agent-server && ruff check . && ruff format --check .
 
@@ -1166,7 +1160,7 @@ docker-compose up --build
 
 | Rationalization | Reality |
 |---|---|
-| "I'll wrap AgentScope in FastAPI for convenience" | **禁止！** FastAPI 与 AgentScope 必须完全独立。AgentScope 有自己的 HTTP Server，前端直连。FastAPI 包装会导致耦合、难以独立扩展和部署。 |
+| "I'll wrap AgentScope in FastAPI for convenience" | **禁止！** FastAPI 与 AgentScope Runtime 必须完全独立。AgentScope Runtime 通过 AgentApp 自带 HTTP Server 和 SSE 流式输出，前端直连。FastAPI 包装会导致耦合、难以独立扩展和部署。 |
 | "I'll add agent integration later" | Agent integration affects frontend architecture (dual client), session management, and deployment. Retrofitting is 5x harder than building it in from the start. |
 | "We don't need the admin-app yet" | Admin-app provides auth, memory management, and system monitoring. You need it from day one. |
 | "I'll just use localStorage for tokens" | localStorage is vulnerable to XSS. Memory-only tokens with refresh flow is the production standard. |
@@ -1191,7 +1185,7 @@ docker-compose up --build
 - Hardcoded model names or API keys in agent-server code
 - No session persistence for agent conversations
 - **FastAPI 代码中 import agentscope（禁止！两者必须完全独立）**
-- **web-app 通过 FastAPI 代理调用 AgentScope（禁止！前端直连 AgentScope Server）**
+- **web-app 通过 FastAPI 代理调用 AgentScope（禁止！前端直连 AgentScope Runtime）**
 
 ## Verification
 
@@ -1203,13 +1197,13 @@ After completing the scaffold, confirm:
 - [ ] `/api/v1/web/health` and `/api/v1/admin/health` return 200
 - [ ] `/api/v1/admin/auth/login` returns JWT tokens, `/me` requires Bearer token
 - [ ] `/api/v1/web/memory/{session_id}` returns memory data
-- [ ] `cd agent-server && uvicorn app.server:agent_app --reload --port 8080` starts
-- [ ] `http://localhost:8080/health` returns 200
-- [ ] `http://localhost:8080/chat` returns agent responses
-- [ ] `http://localhost:8080/chat/stream` returns SSE events
+- [ ] `cd agent-server && python app_agent.py` starts
+- [ ] `http://localhost:8090/process` returns 200
+- [ ] `http://localhost:8090/process` returns agent responses
+- [ ] `http://localhost:8090/process/stream` returns SSE events
 - [ ] `cd web-app && pnpm dev` starts on port 5173, pages render correctly
 - [ ] `cd admin-app && pnpm dev` starts on port 5174, login flow works
-- [ ] web-app can directly call AgentScope Server (port 8080) for agent chat
+- [ ] web-app can directly call AgentScope Runtime (port 8090) for agent chat
 - [ ] web-app can call api-server (port 8000) for health check and memory queries
 - [ ] `cd api-server && pytest tests/ -v` all pass
 - [ ] `cd agent-server && pytest tests/ -v` all pass
@@ -1224,7 +1218,7 @@ After completing the scaffold, confirm:
 - [ ] AgentScope agents can be created and respond to messages
 - [ ] Agent session state persists across requests
 - [ ] **api-server 代码中无任何 `import agentscope`（完全独立）**
-- [ ] **web-app 通过 agent-client.ts 直连 AgentScope Server（不经过 FastAPI）**
+- [ ] **web-app 通过 agent-client.ts 直连 AgentScope Runtime（不经过 FastAPI）**
 - [ ] `docker-compose up --build` starts all four services
 - [ ] Admin tokens stored in memory, not localStorage
 
@@ -1576,7 +1570,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["python", "app_agent.py"]
 ```
 
 #### 环境变量配置
@@ -1595,10 +1589,10 @@ REDIS_PORT=6379
 | 实践 | 说明 |
 |-----|------|
 | **异步优先** | 所有 Agent 操作使用 `async/await` |
-| **配置外置** | 模型配置、API Key 通过 `application.yml` + 环境变量管理 |
-| **会话隔离** | 每个用户会话使用独立的 session_id |
-| **流式响应** | 长响应使用 SSE 流式返回 |
+| **配置外置** | 模型配置、API Key 通过 `agent_config.yml` + 环境变量管理 |
+| **会话隔离** | 每个用户会话使用独立的 session_id / user_id |
+| **流式响应** | AgentScope Runtime 内置 SSE 流式输出，通过 `/process` 端点自动返回 |
 | **错误处理** | 捕获 Agent 异常并返回友好错误信息 |
 | **记忆压缩** | 启用内存压缩避免上下文窗口溢出 |
 | **多模型支持** | 支持 DashScope、OpenAI、Anthropic 等多提供商 |
-| **可观测性** | 集成 OpenTelemetry 进行追踪 |
+| **可观测性** | AgentScope Runtime 内置 OpenTelemetry 追踪 |
